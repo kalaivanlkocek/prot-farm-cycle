@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Farm Cycle - Final Prototype</title>
+    <style>
+        :root {
+            --bg-color: #f4f1ea;
+            --board-bg: #e8e3d3;
+            --primary: #2c5e3b;
+            --accent: #d4a347;
+            --danger: #b23b3b;
+            --text-dark: #2b2b2b;
+            --text-light: #f9f9f9;
+            --spring: #a8d592;
+            --summer: #f5d47a;
+            --fall: #e09f67;
+            --animal: #92b8d5;
+            --facility: #b8b0a5;
+        }
+
+        * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+
+        body { margin: 0; background-color: var(--bg-color); color: var(--text-dark); display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+        /* Header UI */
+        .header { background: var(--primary); color: var(--text-light); padding: 12px 24px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(0,0,0,0.15); z-index: 10; }
+        .header h1 { margin: 0; font-size: 24px; letter-spacing: 1px; }
+        .status-badge { background: rgba(255,255,255,0.2); padding: 8px 16px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+
+        /* Main Board Layout */
+        #game-board { display: grid; grid-template-columns: 1fr 1.2fr 1fr; grid-template-rows: 1fr 1fr; gap: 16px; padding: 24px; height: calc(100vh - 60px); overflow-y: auto; padding-bottom: 300px; }
+        
+        .player-area { background: white; border: 2px solid #d1c9b8; border-radius: 12px; padding: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); display: flex; flex-direction: column; transition: all 0.3s ease; }
+        .player-area.active-turn { border-color: var(--accent); box-shadow: 0 0 0 4px rgba(212, 163, 71, 0.3); }
+        .player-area.has-rat { border-color: var(--danger); background-color: #fff5f5; }
+        
+        .player-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--board-bg); padding-bottom: 8px; margin-bottom: 12px; }
+        .player-name { font-weight: bold; font-size: 16px; }
+        .player-score { background: var(--primary); color: white; padding: 4px 12px; border-radius: 12px; font-size: 14px; font-weight: bold; }
+        .has-rat .player-score { background: var(--danger); }
+
+        .lahan { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; flex-grow: 1; }
+        .slot { background: var(--board-bg); border: 2px dashed #c2baab; border-radius: 8px; min-height: 80px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 6px; text-align: center; transition: 0.2s; }
+        .slot.filled { border-style: solid; box-shadow: inset 0 0 10px rgba(0,0,0,0.05); }
+        .slot-title { font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+        .slot-desc { font-size: 10px; line-height: 1.1; opacity: 0.8; }
+
+        /* Center Area */
+        #center-area { grid-column: 2; grid-row: 1 / span 2; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        #season-token { width: 140px; height: 140px; border-radius: 50%; display: flex; flex-direction: column; justify-content: center; align-items: center; margin-bottom: 16px; border: 6px solid white; box-shadow: 0 8px 16px rgba(0,0,0,0.1); transition: all 0.5s ease; }
+        .season-Spring { background-color: var(--spring); }
+        .season-Summer { background-color: var(--summer); }
+        .season-Fall { background-color: var(--fall); }
+        #season-token h2 { margin: 0; font-size: 24px; color: var(--text-dark); text-transform: uppercase; }
+        
+        /* Bottom Hand Panel (Toggleable) */
+        #hand-panel { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(30, 40, 30, 0.95); backdrop-filter: blur(10px); border-top: 2px solid var(--accent); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); z-index: 100; display: flex; flex-direction: column; }
+        #hand-panel.closed { transform: translateY(calc(100% - 40px)); }
+        
+        #toggle-btn { background: var(--accent); color: var(--text-dark); border: none; padding: 10px; font-weight: bold; font-size: 14px; cursor: pointer; display: flex; justify-content: center; align-items: center; gap: 8px; width: 100%; }
+        #toggle-btn:hover { background: #e5b458; }
+
+        .hand-container { padding: 20px; display: flex; gap: 12px; overflow-x: auto; justify-content: center; min-height: 260px; }
+        
+        /* Card Styling */
+        .card { width: 140px; border-radius: 12px; padding: 12px; box-shadow: 0 6px 12px rgba(0,0,0,0.2); cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; position: relative; border: 2px solid rgba(255,255,255,0.5); }
+        .card:hover { transform: translateY(-12px) scale(1.02); box-shadow: 0 12px 24px rgba(0,0,0,0.3); z-index: 2; border-color: var(--accent); }
+        
+        .card-Spring { background-color: var(--spring); }
+        .card-Summer { background-color: var(--summer); }
+        .card-Fall { background-color: var(--fall); }
+        .card-Hewan { background-color: var(--animal); }
+        .card-Fasilitas { background-color: var(--facility); }
+        .card-Hama { background-color: var(--danger); color: white; }
+
+        .card-header { font-weight: bold; font-size: 14px; border-bottom: 1px solid rgba(0,0,0,0.1); padding-bottom: 6px; margin-bottom: 6px; }
+        .card-stats { font-size: 11px; display: flex; justify-content: space-between; font-weight: bold; margin-bottom: 6px; background: rgba(255,255,255,0.4); padding: 4px; border-radius: 4px; color: #333; }
+        .card-desc { font-size: 10px; line-height: 1.3; flex-grow: 1; }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <h1>FARM CYCLE</h1>
+    <div class="status-badge">Giliran: Player <span id="txt-turn">1</span></div>
+</div>
+
+<div id="game-board">
+    <div class="player-area" id="p2">
+        <div class="player-header"><div class="player-name">Pemain 2</div><div class="player-score">0 Poin</div></div>
+        <div class="lahan"></div>
+    </div>
+
+    <div id="center-area">
+        <div id="season-token" class="season-Spring"><h2>SPRING</h2><small>Season</small></div>
+        <div style="background: white; padding: 12px 24px; border-radius: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+            <h3 style="margin: 0 0 4px 0; font-size: 16px;">Sisa Deck: <span id="deck-count">0</span></h3>
+            <small style="color: #666;">Pilih 1 kartu dari panel bawah</small>
+        </div>
+    </div>
+
+    <div class="player-area" id="p4">
+        <div class="player-header"><div class="player-name">Pemain 4</div><div class="player-score">0 Poin</div></div>
+        <div class="lahan"></div>
+    </div>
+    
+    <div class="player-area" id="p3">
+        <div class="player-header"><div class="player-name">Pemain 3</div><div class="player-score">0 Poin</div></div>
+        <div class="lahan"></div>
+    </div>
+
+    <div class="player-area" id="p1">
+        <div class="player-header"><div class="player-name">Pemain 1 (Kamu)</div><div class="player-score">0 Poin</div></div>
+        <div class="lahan"></div>
+    </div>
+</div>
+
+<div id="hand-panel" class="">
+    <button id="toggle-btn" onclick="toggleHand()">▼ Sembunyikan Kartu (Lihat Papan)</button>
+    <div class="hand-container" id="current-hand"></div>
+</div>
+
+<script>
+    // Database Kartu Lengkap dengan Kuantitas
+    const cardTemplates = [
+        { name: "Sawi Hijau", type: "Tanaman", season: "Spring", points: 3, bonus: 5, desc: "Sayur cepat, poin stabil di awal.", qty: 4 },
+        { name: "Bayam", type: "Tanaman", season: "Spring", points: 2, bonus: 6, desc: "Sinergi: +2 jika ada Sayur di sebelah.", qty: 4 },
+        { name: "Selada Air", type: "Tanaman", season: "Spring", points: 4, bonus: 4, desc: "Sinergi: +3 jika ada kartu 'Pupuk'.", qty: 4 },
+        { name: "Bunga", type: "Tanaman", season: "Spring", points: 2, bonus: 5, desc: "Sinergi: +4 jika ada Lebah.", qty: 4 },
+        { name: "Tomat", type: "Tanaman", season: "Summer", points: 4, bonus: 8, desc: "Makin panas harinya, makin manis rasanya!", qty: 4 },
+        { name: "Cabai Rawit", type: "Tanaman", season: "Summer", points: 3, bonus: 9, desc: "Sinergi: +3 jika di slot paling pinggir.", qty: 4 },
+        { name: "Jagung Manis", type: "Tanaman", season: "Summer", points: 5, bonus: 7, desc: "Sinergi: +4 jika ada Ayam di sebelah.", qty: 4 },
+        { name: "Semangka", type: "Tanaman", season: "Summer", points: 4, bonus: 8, desc: "Sinergi: +3 jika di slot 4.", qty: 4 },
+        { name: "Labu Raksasa", type: "Tanaman", season: "Fall", points: 6, bonus: 12, desc: "Butuh waktu lama untuk tumbuh.", qty: 4 },
+        { name: "Ubi Ungu", type: "Tanaman", season: "Fall", points: 5, bonus: 10, desc: "Sinergi: +4 jika ada kartu 'Pupuk'.", qty: 4 },
+        { name: "Wortel", type: "Tanaman", season: "Fall", points: 4, bonus: 11, desc: "Sinergi: +5 jika ada Kelinci.", qty: 4 },
+        { name: "Kentang", type: "Tanaman", season: "Fall", points: 3, bonus: 9, desc: "Sinergi: +5 jika di slot sudut.", qty: 4 },
+        { name: "Lebah", type: "Hewan", season: "Semua", points: 2, bonus: 0, desc: "Sinergi: +3 ke Bunga/Sayur sekitar.", qty: 3 },
+        { name: "Ayam", type: "Hewan", season: "Semua", points: 4, bonus: 0, desc: "Sinergi: +5 jika sebelah Tomat/Cabai.", qty: 3 },
+        { name: "Kelinci", type: "Hewan", season: "Semua", points: 3, bonus: 0, desc: "Sinergi: +2 ke SEMUA kartu di papan.", qty: 3 },
+        { name: "Tikus", type: "Hama", season: "Semua", points: 0, bonus: 0, desc: "Korupsi poin! Tikus mencuri hasil panenmu.", qty: 3 },
+        { name: "Pupuk Organik", type: "Fasilitas", season: "Semua", points: 0, bonus: 0, desc: "Sinergi: Lipat gandakan poin tanaman.", qty: 6 },
+        { name: "Pagar Bambu", type: "Fasilitas", season: "Semua", points: 1, bonus: 0, desc: "Protection: Jaga skor farm dari Tikus.", qty: 4 },
+        { name: "Rumah Kaca", type: "Fasilitas", season: "Semua", points: 0, bonus: 0, desc: "Season Hack: Tetap dapat bonus walau beda musim.", qty: 2 }
+    ];
+
+    let game = {
+        masterDeck: [],
+        season: "Spring",
+        seasons: ["Spring", "Summer", "Fall"],
+        currentSeasonIdx: 0,
+        turn: 0,
+        hands: [[], [], [], []],
+        boards: [[], [], [], []],
+        scores: [0, 0, 0, 0],
+        hasRat: [false, false, false, false]
+    };
+
+    function toggleHand() {
+        const panel = document.getElementById('hand-panel');
+        const btn = document.getElementById('toggle-btn');
+        panel.classList.toggle('closed');
+        btn.innerText = panel.classList.contains('closed') ? "▲ Tampilkan Kartu Pilihan" : "▼ Sembunyikan Kartu (Lihat Papan)";
+    }
+
+    function buildAndShuffleDeck() {
+        game.masterDeck = [];
+        cardTemplates.forEach(t => {
+            for(let i=0; i<t.qty; i++) game.masterDeck.push({...t});
+        });
+        // Fisher-Yates Shuffle
+        for (let i = game.masterDeck.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [game.masterDeck[i], game.masterDeck[j]] = [game.masterDeck[j], game.masterDeck[i]];
+        }
+    }
+
+    function startSeason() {
+        game.hands = [[], [], [], []];
+        game.boards = [[], [], [], []];
+        game.hasRat = [false, false, false, false];
+        
+        // Pembagian 6 kartu per pemain
+        for(let i=0; i<4; i++) {
+            for(let j=0; j<6; j++) {
+                if(game.masterDeck.length > 0) {
+                    game.hands[i].push(game.masterDeck.pop());
+                }
+            }
+        }
+        render();
+    }
+
+    function checkRatDomino(startIdx) {
+        let current = startIdx;
+        let checked = 0;
+        while(checked < 4) {
+            const hasFence = game.boards[current].some(c => c.name === "Pagar Bambu");
+            if(hasFence) {
+                current = (current + 1) % 4; // Geser ke kiri
+                checked++;
+            } else {
+                game.hasRat[current] = true;
+                return `Tikus bersarang di lahan Pemain ${current + 1}! Poin hangus.`;
+            }
+        }
+        return "Semua pemain memiliki Pagar Bambu. Tikus lari terbirit-birit!";
+    }
+
+    function playCard(cardIdx) {
+        const p = game.turn;
+        const card = game.hands[p].splice(cardIdx, 1)[0];
+        game.boards[p].push(card);
+
+        if(card.name === "Tikus") {
+            alert(checkRatDomino(p));
+        }
+
+        game.turn = (game.turn + 1) % 4;
+
+        // Drafting: Rotasi tangan jika semua sudah pilih
+        if(game.turn === 0) {
+            let temp = game.hands[0];
+            game.hands[0] = game.hands[1];
+            game.hands[1] = game.hands[2];
+            game.hands[2] = game.hands[3];
+            game.hands[3] = temp;
+            
+            if(game.hands[0].length === 0) {
+                calculateScores();
+                return;
+            }
+        }
+        
+        // Auto-open hand panel if it was closed
+        document.getElementById('hand-panel').classList.remove('closed');
+        document.getElementById('toggle-btn').innerText = "▼ Sembunyikan Kartu (Lihat Papan)";
+        render();
+    }
+
+    function calculateScores() {
+        /* Catatan: Kalkulasi ini menghitung base point + bonus musim. 
+           Sinergi posisi yang kompleks dihitung manual oleh pemain di akhir permainan. */
+        for(let i=0; i<4; i++) {
+            if(game.hasRat[i]) continue;
+            
+            game.boards[i].forEach(c => {
+                let p = c.points;
+                let hasGreenhouse = game.boards[i].some(k => k.name === "Rumah Kaca");
+                if(c.season === game.season || hasGreenhouse) {
+                    p += c.bonus;
+                }
+                game.scores[i] += p;
+            });
+            
+            // Check Multiplier (Pupuk)
+            let pupukCount = game.boards[i].filter(k => k.name === "Pupuk Organik").length;
+            if(pupukCount > 0) {
+                game.scores[i] += (game.scores[i] * pupukCount);
+            }
+        }
+        
+        game.currentSeasonIdx++;
+        if(game.currentSeasonIdx < 3) {
+            game.season = game.seasons[game.currentSeasonIdx];
+            alert(`Musim berakhir! Skor sementara diupdate. Bersiap untuk musim ${game.season}`);
+            
+            // Update UI token Token Musim
+            const token = document.getElementById('season-token');
+            token.className = `season-${game.season}`;
+            token.innerHTML = `<h2>${game.season}</h2><small>Season</small>`;
+            
+            startSeason();
+        } else {
+            alert("PERMAINAN SELESAI! Sinergi posisi spesifik dapat dihitung manual untuk menentukan pemenang mutlak.");
+            document.getElementById('hand-panel').style.display = 'none';
+            render();
+        }
+    }
+
+    function render() {
+        document.getElementById('txt-turn').innerText = game.turn + 1;
+        document.getElementById('deck-count').innerText = game.masterDeck.length;
+
+        // Render Hand UI
+        const handDiv = document.getElementById('current-hand');
+        handDiv.innerHTML = '';
+        game.hands[game.turn].forEach((c, idx) => {
+            const div = document.createElement('div');
+            // Penentuan class warna berdasar tipe/musim
+            let colorClass = `card-${c.season}`;
+            if(c.type === "Hewan") colorClass = "card-Hewan";
+            if(c.type === "Fasilitas") colorClass = "card-Fasilitas";
+            if(c.type === "Hama") colorClass = "card-Hama";
+
+            div.className = `card ${colorClass}`;
+            div.innerHTML = `
+                <div class="card-header">${c.name}</div>
+                <div class="card-stats"><span>P: ${c.points}</span><span>B: +${c.bonus}</span></div>
+                <div class="card-desc">${c.desc}</div>
+            `;
+            div.onclick = () => playCard(idx);
+            handDiv.appendChild(div);
+        });
+
+        // Render Papan
+        for(let i=0; i<4; i++) {
+            const area = document.getElementById(`p${i+1}`);
+            
+            // Highlight active player
+            if(i === game.turn) area.classList.add('active-turn');
+            else area.classList.remove('active-turn');
+
+            if(game.hasRat[i]) area.classList.add('has-rat');
+            else area.classList.remove('has-rat');
+
+            area.querySelector('.player-score').innerText = `${game.scores[i]} Poin`;
+            const lahan = area.querySelector('.lahan');
+            lahan.innerHTML = '';
+            
+            for(let s=0; s<6; s++) {
+                const slot = document.createElement('div');
+                const card = game.boards[i][s];
+                if(card) {
+                    let cClass = `card-${card.season}`;
+                    if(card.type === "Hewan") cClass = "card-Hewan";
+                    if(card.type === "Fasilitas") cClass = "card-Fasilitas";
+                    if(card.type === "Hama") cClass = "card-Hama";
+                    
+                    slot.className = `slot filled ${cClass}`;
+                    slot.style.borderStyle = 'solid';
+                    slot.style.color = card.type === 'Hama' ? 'white' : 'inherit';
+                    slot.innerHTML = `<div class="slot-title">${card.name}</div><div class="slot-desc">P: ${card.points} | B: +${card.bonus}</div>`;
+                } else {
+                    slot.className = `slot`;
+                    slot.innerHTML = `<div style="opacity: 0.3;">Slot ${s+1}</div>`;
+                }
+                lahan.appendChild(slot);
+            }
+        }
+    }
+
+    buildAndShuffleDeck();
+    startSeason();
+</script>
+</body>
+</html>
