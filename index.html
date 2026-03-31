@@ -193,30 +193,10 @@
         render();
     }
 
-    function checkRatDomino(startIdx) {
-        let current = startIdx;
-        let checked = 0;
-        while(checked < 4) {
-            const hasFence = game.boards[current].some(c => c.name === "Pagar Bambu");
-            if(hasFence) {
-                current = (current + 1) % 4; // Geser ke kiri
-                checked++;
-            } else {
-                game.hasRat[current] = true;
-                return `Tikus bersarang di lahan Pemain ${current + 1}! Poin hangus.`;
-            }
-        }
-        return "Semua pemain memiliki Pagar Bambu. Tikus lari terbirit-birit!";
-    }
-
     function playCard(cardIdx) {
         const p = game.turn;
         const card = game.hands[p].splice(cardIdx, 1)[0];
         game.boards[p].push(card);
-
-        if(card.name === "Tikus") {
-            alert(checkRatDomino(p));
-        }
 
         game.turn = (game.turn + 1) % 4;
 
@@ -228,6 +208,7 @@
             game.hands[2] = game.hands[3];
             game.hands[3] = temp;
             
+            // Pengecekan akhir musim dipindah ke sini
             if(game.hands[0].length === 0) {
                 calculateScores();
                 return;
@@ -241,43 +222,88 @@
     }
 
     function calculateScores() {
-        /* Catatan: Kalkulasi ini menghitung base point + bonus musim. 
-           Sinergi posisi yang kompleks dihitung manual oleh pemain di akhir permainan. */
+        let ratMessages = [];
+        
+        // 1. Evaluasi Tikus di AKHIR MUSIM
+        for (let p = 0; p < 4; p++) {
+            // Cek setiap kartu Tikus yang ada di papan pemain ini
+            game.boards[p].forEach(card => {
+                if (card.name === "Tikus") {
+                    let target = p;
+                    let checked = 0;
+                    let ratSettled = false;
+                    
+                    // Tikus mencari mangsa yang tidak punya pagar
+                    while (checked < 4) {
+                        let hasFence = game.boards[target].some(c => c.name === "Pagar Bambu");
+                        if (!hasFence) {
+                            game.hasRat[target] = true;
+                            ratSettled = true;
+                            break; // Tikus menetap di sini
+                        }
+                        target = (target + 1) % 4; // Oper ke kiri
+                        checked++;
+                    }
+                    
+                    if (!ratSettled && checked === 4 && !ratMessages.includes("Semua pemain punya Pagar! Tikus gagal mencuri poin.")) {
+                        ratMessages.push("Semua pemain punya Pagar! Tikus gagal mencuri poin.");
+                    }
+                }
+            });
+        }
+
+        // 2. Hitung Poin
         for(let i=0; i<4; i++) {
-            if(game.hasRat[i]) continue;
+            if(game.hasRat[i]) {
+                ratMessages.push(`Pemain ${i+1} terkena wabah Tikus! Poin musim ini hangus (0).`);
+                continue; // Skip kalkulasi, poin musim ini 0
+            }
             
+            let seasonPoints = 0;
             game.boards[i].forEach(c => {
                 let p = c.points;
                 let hasGreenhouse = game.boards[i].some(k => k.name === "Rumah Kaca");
                 if(c.season === game.season || hasGreenhouse) {
                     p += c.bonus;
                 }
-                game.scores[i] += p;
+                seasonPoints += p;
             });
             
             // Check Multiplier (Pupuk)
             let pupukCount = game.boards[i].filter(k => k.name === "Pupuk Organik").length;
             if(pupukCount > 0) {
-                game.scores[i] += (game.scores[i] * pupukCount);
+                seasonPoints += (seasonPoints * pupukCount);
             }
+            
+            game.scores[i] += seasonPoints;
         }
         
-        game.currentSeasonIdx++;
-        if(game.currentSeasonIdx < 3) {
-            game.season = game.seasons[game.currentSeasonIdx];
-            alert(`Musim berakhir! Skor sementara diupdate. Bersiap untuk musim ${game.season}`);
+        // Render UI dulu agar pemain bisa melihat indikator merah (has-rat) di papan
+        render();
+
+        // 3. Tampilkan Notifikasi & Lanjut Musim (Menggunakan timeout agar UI sempat ter-render)
+        setTimeout(() => {
+            if(ratMessages.length > 0) {
+                alert("EVALUASI HAMA (TIKUS):\n\n" + ratMessages.join("\n"));
+            }
             
-            // Update UI token Token Musim
-            const token = document.getElementById('season-token');
-            token.className = `season-${game.season}`;
-            token.innerHTML = `<h2>${game.season}</h2><small>Season</small>`;
-            
-            startSeason();
-        } else {
-            alert("PERMAINAN SELESAI! Sinergi posisi spesifik dapat dihitung manual untuk menentukan pemenang mutlak.");
-            document.getElementById('hand-panel').style.display = 'none';
-            render();
-        }
+            game.currentSeasonIdx++;
+            if(game.currentSeasonIdx < 3) {
+                game.season = game.seasons[game.currentSeasonIdx];
+                alert(`Musim berakhir! Skor sementara diupdate. Bersiap untuk musim ${game.season}`);
+                
+                // Update UI token Token Musim
+                const token = document.getElementById('season-token');
+                token.className = `season-${game.season}`;
+                token.innerHTML = `<h2>${game.season}</h2><small>Season</small>`;
+                
+                startSeason();
+            } else {
+                alert("PERMAINAN SELESAI! Sinergi posisi spesifik dapat dihitung manual untuk menentukan pemenang mutlak.");
+                document.getElementById('hand-panel').style.display = 'none';
+                render(); // Final render
+            }
+        }, 300); // Jeda 300ms
     }
 
     function render() {
@@ -313,6 +339,7 @@
             if(i === game.turn) area.classList.add('active-turn');
             else area.classList.remove('active-turn');
 
+            // Kasih indikator visual jika kena tikus
             if(game.hasRat[i]) area.classList.add('has-rat');
             else area.classList.remove('has-rat');
 
