@@ -182,6 +182,9 @@
         game.boards = [[], [], [], []];
         game.hasRat = [false, false, false, false];
         
+        // Kocok ulang 72 kartu setiap musim berganti agar probabilitas merata
+        buildAndShuffleDeck(); 
+        
         // Pembagian 6 kartu per pemain
         for(let i=0; i<4; i++) {
             for(let j=0; j<6; j++) {
@@ -369,8 +372,7 @@
         }
     }
 
-    buildAndShuffleDeck();
-    startSeason();
+    startSeason(); // Memulai game untuk pertama kalinya
 </script>
 </body>
 </html>
